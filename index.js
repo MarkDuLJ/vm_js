@@ -1,32 +1,58 @@
 const {createMemory} = require('./create_mem');
-const {MOVE_TO_R1, MOVE_TO_R2, ADD_REG_REG} = require('./instructions');
+const instructions = require('./instructions');
 const CPU = require('./cpu');
 
-const memory = createMemory(256);
+const IP = 0;
+const ACC = 1;
+const R1 = 2;
+const R2 = 3;
+
+const memory = createMemory(256 * 256);
 const writableBytes = new Uint8Array(memory.buffer);
 
-writableBytes[0] = MOVE_TO_R1;
-writableBytes[1] = 0x12; //ox1234
-writableBytes[2] = 0x34;
+let i = 0;
+writableBytes[i++] = instructions.MOVE_LIT_REG;
+writableBytes[i++] = 0x12; //ox1234
+writableBytes[i++] = 0x34;
+writableBytes[i++] = R1; //dynamic register index
 
-writableBytes[3] = MOVE_TO_R2;
-writableBytes[4] = 0xAB; //oxABCD
-writableBytes[5] = 0xCD;
+writableBytes[i++] = instructions.MOVE_LIT_REG;
+writableBytes[i++] = 0xAB; //oxABCD
+writableBytes[i++] = 0xCD;
+writableBytes[i++] = R2;
 
-writableBytes[6] = ADD_REG_REG;
-writableBytes[7] = 2; // r1 index
-writableBytes[8] = 3; // r2 index
+writableBytes[i++] = instructions.ADD_REG_REG;
+writableBytes[i++] = R1; 
+writableBytes[i++] = R2; 
+
+writableBytes[i++] = instructions.MOVE_REG_MEM; 
+writableBytes[i++] = ACC; 
+writableBytes[i++] = 0x01; 
+writableBytes[i++] = 0x00; //0x0100
 
 const cpu = new CPU(memory);
-console.log(
-
-    cpu.step()
-);
 
 cpu.debug();
+cpu.peekMem(cpu.getReg('ip'));
+cpu.peekMem(0x0100);
 
 cpu.step();
-cpu.debug()
-cpu.step()
 cpu.debug();
+cpu.peekMem(cpu.getReg('ip'));
+cpu.peekMem(0x0100);
+
+cpu.step();
+cpu.debug();
+cpu.peekMem(cpu.getReg('ip'));
+cpu.peekMem(0x0100);
+
+cpu.step();
+cpu.debug();
+cpu.peekMem(cpu.getReg('ip'));
+cpu.peekMem(0x0100);
+
+cpu.step();
+cpu.debug();
+cpu.peekMem(cpu.getReg('ip'));
+cpu.peekMem(0x0100);
 

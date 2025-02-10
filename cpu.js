@@ -1,5 +1,5 @@
 const {createMemory} = require('./create_mem');
-const {ADD_REG_REG, MOVE_TO_R1, MOVE_TO_R2} = require('./instructions');
+const instructions = require('./instructions');
 
 class CPU {
     constructor(memory) {
@@ -30,15 +30,27 @@ class CPU {
 
     debug() {
         this.registerNames.forEach(name => {
-            console.log(`${name}: ${this.getReg(name)}`);
-            
-        })
+            console.log(`${name}: ${this.getReg(name).toString(16).padStart(4,'0')}`);            
+        });
+        console.log();
+        
+    }
+
+    //return address: value on address and other 7 bytes followed
+    // 0x0f01: 0x04 0x05 0x06 0x07 0x08 0x09 0xa0 0xb0
+    peekMem(address) {
+        const next8Bytes = Array.from({length: 8}, (_,i) =>
+            this.memory.getUint8(address + i))
+            .map(v => `0x${v.toString(16).padStart(2,'0')} `);
+        console.log(`0x${address.toString(16).padStart(4, '0')}: ${next8Bytes.join(' ')}`);
+        
     }
 
     getReg(reg) {
         if(!( reg in this.registerMap)) {
             throw new Error(`GetRegister: no ${reg} in registers.`);
         }
+        
         return this.registers.getUint16(this.registerMap[reg]);
     }
 
@@ -68,20 +80,42 @@ class CPU {
 
     excute(instruction){
         switch (instruction) {
-            //move value into r1 register, move is defined as 0x10 here
-            case MOVE_TO_R1:{
+            //move value into register, like r1
+            case instructions.MOVE_LIT_REG:{
                 const literal = this.fetch16();
-                this.setReg('r1', literal);
+                const register = (this.fetch8() % this.registerNames.length) * 2;
+                this.registers.setUint16(register, literal);
                 return;
             }
-            //move value to r2
-            case MOVE_TO_R2: {
-                const literal = this.fetch16();
-                this.setReg('r2', literal);
+
+            //move registr to register
+            case instructions.MOVE_REG_REG: {
+                const regFrom = (this.fetch8() % this.registerNames.length) * 2;
+                const regTo = (this.fetch8() % this.registerNames.length) * 2;
+                const value = this.registers.getUint16(regFrom);
+                this.registers.setUint16(regTo, value);
+                return;
+            }
+
+            //move register to memory
+            case instructions.MOVE_REG_MEM: {
+                const regFrom = (this.fetch8() % this.registerNames.length) * 2;
+                const address = this.fetch16();
+                const value = this.registers.getUint16(regFrom);
+                this.memory.setUint16(address,value);
+                return;
+            }
+
+            //move memory to register
+            case instructions.MOVE_MEM_REG: {
+                const address = this.fetch16();
+                const regTo = (this.fetch8() % this.registerNames.length) * 2;
+                const value = this.memory.getUint16(address);
+                this.registers.setUint16(regTo,value);
                 return;
             }
             //add register to register, only one byte inside
-            case ADD_REG_REG: {
+            case instructions.ADD_REG_REG: {
                 const r1 = this.fetch8();
                 const r2 = this.fetch8();
                 const r1Val = this.registers.getUint16(r1 * 2);

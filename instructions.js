@@ -1,9 +1,13 @@
-const MOVE_TO_R1  = 0x10;
-const MOVE_TO_R2  = 0x11;
-const ADD_REG_REG = 0x12;
+const MOVE_LIT_REG  = 0x10;
+const MOVE_REG_REG  = 0x11;
+const MOVE_REG_MEM  = 0x12;
+const MOVE_MEM_REG  = 0x13;
+const ADD_REG_REG   = 0x14;
 
 module.exports = {
-    MOVE_TO_R1, 
-    MOVE_TO_R2,
+    MOVE_LIT_REG,
+    MOVE_REG_REG,
+    MOVE_REG_MEM,
+    MOVE_MEM_REG,
     ADD_REG_REG,
 }
