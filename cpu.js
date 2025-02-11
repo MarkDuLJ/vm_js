@@ -30,7 +30,7 @@ class CPU {
 
     debug() {
         this.registerNames.forEach(name => {
-            console.log(`${name}: ${this.getReg(name).toString(16).padStart(4,'0')}`);            
+            console.log(`${name}: 0x${this.getReg(name).toString(16).padStart(4,'0')}`);            
         });
         console.log();
         
@@ -80,7 +80,7 @@ class CPU {
 
     excute(instruction){
         switch (instruction) {
-            //move value into register, like r1
+            //move value from memory ito register, like memory to r1
             case instructions.MOVE_LIT_REG:{
                 const literal = this.fetch16();
                 const register = (this.fetch8() % this.registerNames.length) * 2;
@@ -121,6 +121,16 @@ class CPU {
                 const r1Val = this.registers.getUint16(r1 * 2);
                 const r2Val = this.registers.getUint16(r2 * 2);
                 this.setReg('acc', r1Val + r2Val);
+                return;
+            }
+
+            //Branching: conditional jumping
+            case instructions.JUM_NOT_EQ: {
+                const value = this.fetch16();
+                const address = this.fetch16();
+                if( value !== this.getReg('acc')){
+                    this.setReg('ip', address);
+                }
                 return;
             }
         }
