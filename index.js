@@ -3,6 +3,8 @@ const readline = require('readline');
 const {createMemory} = require('./create_mem');
 const instructions = require('./instructions');
 const CPU = require('./cpu');
+const MemoryMapper = require('./mem_mapper');
+const createScreenDev = require('././screen_device');
 
 const IP = 0;
 const ACC = 1;
@@ -17,13 +19,35 @@ const R8 = 9;
 const SP = 10;
 const FP = 11;
 
+const MM = new MemoryMapper();
 const memory = createMemory(256 * 256);
+MM.map(memory, 0, 0xffff); //map memory just created to mapper, no difference for now
+
+const lcd = createScreenDev();
+
+//map 0xff bytes of the address space to an "output" device, here is standout
+MM.map(lcd, 0x3000, 0x30ff, true);
+
 const writableBytes = new Uint8Array(memory.buffer);
 
+const cpu = new CPU(MM);//now cpu is using mapped address
 
-const cpu = new CPU(memory);
 
 let i = 0;
+writableBytes[i++] = instructions.MOVE_LIT_REG;
+writableBytes[i++] = 0x00;
+writableBytes[i++] = 'H'.charCodeAt(0);
+writableBytes[i++] = R1;
+
+writableBytes[i++] = instructions.MOVE_REG_MEM;
+writableBytes[i++] = R1;
+writableBytes[i++] = 0x30;
+writableBytes[i++] = 0x00;
+
+writableBytes[i++] = instructions.HLT;
+
+cpu.run();
+
 
 /** #: memory address
  * move #0x0100, r1
@@ -113,6 +137,7 @@ writableBytes[i++] = R2;
  * ret
  */
 
+/** 
 const subroutineAddress = 0x3000;
 writableBytes[i++] = instructions.PSH_LIT;
 writableBytes[i++] = 0x33;
@@ -191,4 +216,4 @@ rl.on('line', () => {
     cpu.peekMem(cpu.getReg('ip'));
     cpu.peekMem(0xffff -1 -42, 44);
 })
-
+*/

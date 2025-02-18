@@ -30,8 +30,12 @@ class CPU {
             return map;
         }, {});
 
-        this.setReg('sp', memory.byteLength - 1 - 1); // for 16bit vm, move 1 to end of memory,move another one byte to get the right position
-        this.setReg('fp', memory.byteLength - 1 - 1);
+        // this.setReg('sp', memory.byteLength - 1 - 1); // for 16bit vm, move 1 to end of memory,move another one byte to get the right position
+        // this.setReg('fp', memory.byteLength - 1 - 1);
+
+        //set stack pointer & fp to a fix address temporarily
+        this.setReg('sp', 0xffff - 1); // for 16bit vm, move 1 to end of memory,move another one byte to get the right position
+        this.setReg('fp', 0xffff - 1);
 
         this.stackFrameSize = 0; //to track stack frame size, required by stack frame
     }
@@ -208,8 +212,8 @@ class CPU {
             case instructions.ADD_REG_REG: {
                 const r1 = this.fetch8();
                 const r2 = this.fetch8();
-                const r1Val = this.registers.getUint16(r1 * 2);
-                const r2Val = this.registers.getUint16(r2 * 2);
+                const r1Val = this.registers.getUint16(r1);
+                const r2Val = this.registers.getUint16(r2);
                 this.setReg('acc', r1Val + r2Val);
                 return;
             }
@@ -269,12 +273,26 @@ class CPU {
                 this.popState();
                 return;
             }
+
+            //halt all actions
+            case instructions.HLT: {
+                return true;
+            }
         }
     }
 
     step() {
         const instruction = this.fetch8();
         return this.excute(instruction);
+    }
+
+    //check each step return, if not halt, run again
+    run(){
+        const halt = this.step();
+
+        if (!halt) {
+            setImmediate(() => this.run());
+        }
     }
 }
 
