@@ -1,20 +1,42 @@
-const moveTo = (x, y) => {
+const eraseScreen = () => {
+    process.stdout.write('\x1b[2J'); //it may not happens in mac system
+  }
+  
+  const moveTo = (x, y) => {
     process.stdout.write(`\x1b[${y};${x}H`);
   }
-const createScreenDev = () => {
+  
+  const setBold = () => {
+    process.stdout.write('\x1b[1m');
+  }
+  
+  const setRegular = () => {
+    process.stdout.write('\x1b[0m');
+  }
+
+  const createScreenDev = () => {
     return {
-        getUint16: () => 0,
-        getUint8: () => 0,
-        setUint16: (address, data) => {
-            const charValue = data & 0x00ff;
-            // calculate position, starting at 1 not 0
-            const x = (address % 16) + 1;
-            const y = Math.floor(address / 16) + 1;
-            moveTo(x * 2,y); //+2 for better looking
-            const char = String.fromCharCode(charValue);
-            process.stdout.write(char);
+      getUint16: () => 0,
+      getUint8: () => 0,
+      setUint16: (address, data) => {
+        const command = (data & 0xff00) >> 8;
+        const characterValue = data & 0x00ff;
+  
+        if (command === 0xff) {
+          eraseScreen();
+        } else if (command === 0x01) {
+          setBold();
+        } else if (command === 0x02) {
+          setRegular();
         }
+  
+        const x = (address % 16) + 1;
+        const y = Math.floor(address / 16) + 1;
+        moveTo(x * 2, y);
+        const character = String.fromCharCode(characterValue);
+        process.stdout.write(character);
+      }
     }
-}
+  };
 
 module.exports = createScreenDev;
