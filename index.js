@@ -34,16 +34,28 @@ const cpu = new CPU(MM);//now cpu is using mapped address
 
 
 let i = 0;
+
+const writeCharToScreen = (char, position) => {
 writableBytes[i++] = instructions.MOVE_LIT_REG;
 writableBytes[i++] = 0x00;
-writableBytes[i++] = 'H'.charCodeAt(0);
+writableBytes[i++] = char.charCodeAt(0);
 writableBytes[i++] = R1;
 
 writableBytes[i++] = instructions.MOVE_REG_MEM;
 writableBytes[i++] = R1;
 writableBytes[i++] = 0x30;
-writableBytes[i++] = 0x00;
+writableBytes[i++] = position;
+}
 
+
+"Hi there".split('').forEach((char,index) => {
+    writeCharToScreen(char,index);
+})
+
+for (let index = 0; index < 0xffff; index++) {
+    writeCharToScreen('*', index);
+    
+}
 writableBytes[i++] = instructions.HLT;
 
 cpu.run();
