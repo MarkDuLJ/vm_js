@@ -219,8 +219,32 @@ const singleLit = (mnemonic, type) => A.coroutine(run => {
     }); 
   });
 
+const regLit = (mnemonic, type) => A.coroutine(run => {
+  run(upperOrLowerStr(mnemonic));
+  run(A.whitespace);
+
+  const r1 = run(register);
+
+  run(A.optionalWhitespace);
+  run(A.char(','));
+  run(A.optionalWhitespace);
+
+  const lit = run(A.choice([
+    hexLiteral,
+    squareBracketExpr,
+  ]));
+
+  run(A.optionalWhitespace);
+
+  return T.instruction({
+    instruction: type,
+    args: [r1, lit],
+  })
+});
+
 module.exports = {
   litReg,
+  regLit,
   regReg,
   regMem,
   memReg,
