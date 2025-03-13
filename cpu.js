@@ -1,31 +1,16 @@
 const { log } = require('console');
 const {createMemory} = require('./create_mem');
 const instructions = require('./instructions');
+const registers = require('./registers');
 
 class CPU {
     constructor(memory) {
         this.memory = memory;
 
-        this.registerNames = [ //they are all a bit of mem actually
-            'ip', // instruction pointer
-            'acc', //accumulator
-            'r1', //below are general purpose registers
-            'r2',
-            'r3',
-            'r4',
-            'r5',
-            'r6',
-            'r7',
-            'r8',
-            'sp',//stack pointer
-            'fp',//frame pointer
-        ];
-
-        //every register gets 2 bytes mem for a 16 bit vm
-        this.registers = createMemory(this.registerNames.length * 2); 
+        this.registerNames = registers;
 
         //mapping name to actual memory
-        this.registerMap = this.registerNames.reduce((map, name, i) => {
+        this.registerMap = registers.reduce((map, name, i) => {
             map[name] = i * 2;
             return map;
         }, {});
