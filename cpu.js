@@ -7,7 +7,7 @@ class CPU {
     constructor(memory) {
         this.memory = memory;
 
-        this.registerNames = registers;
+        this.registers = createMemory(registers.length * 2);
 
         //mapping name to actual memory
         this.registerMap = registers.reduce((map, name, i) => {

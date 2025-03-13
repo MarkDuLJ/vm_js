@@ -1,11 +1,71 @@
-const readline = require('readline');
+// const readline = require('readline');
+// const createScreenDev = require('././screen_device');
+// const instructions = require('./instructions');
 
 const {createMemory} = require('./create_mem');
-const instructions = require('./instructions');
 const CPU = require('./cpu');
 const MemoryMapper = require('./mem_mapper');
-const createScreenDev = require('././screen_device');
+const MM = new MemoryMapper();
 
+const dataViewMethods = [
+    'getUint8',
+    'getUint16',
+    'setUint8',
+    'setUint16',
+];
+
+const createBankMem = (n, bankSize, cpu) => {
+    const bankBuffers = Array.from({length: n}, () => new ArrayBuffer(bankSize));
+    const banks = bankBuffers.map(ab => new DataView(ab));
+
+    const forwardToDataView = fnName => (...args) => {
+        const bankIndex = cpu.getReg('mb') % n;
+        const memBankToUse = banks[bankIndex];
+        return memBankToUse[fnName](...args);
+    };
+
+    const interface = dataViewMethods.reduce((dvOut, fnName) => {
+        dvOut[fnName] = forwardToDataView(fnName);
+        return dvOut;
+    }, {});
+
+    return interface;
+};
+
+const banksize = 0xff;
+const nBanks = 8;
+
+const cpu = new CPU(MM);
+
+const memoryBankDevice = createBankMem(nBanks, banksize, cpu);
+MM.map(memoryBankDevice, 0, banksize);
+
+const regularMem = createMemory(0xff00);
+MM.map(regularMem, banksize, 0xffff, true);
+
+// check memory works
+console.log(`Writing value to address 0`);
+
+MM.setUint16(0,1);
+console.log('read value from address: 0', MM.getUint16(0));
+
+cpu.setReg('mb', 1);
+console.log('switch to bank 1', MM.getUint16(0));
+MM.setUint16(0,55);
+console.log('read value from address: 1', MM.getUint16(0));
+console.log('switch to bank 2 then set value....');
+cpu.setReg('mb', 2);
+MM.setUint16(0,66);
+console.log('read value from address: 2', MM.getUint16(0));
+console.log("go back to bank 1");
+cpu.setReg('mb', 1);
+console.log('read value from address: 1', MM.getUint16(0));
+cpu.setReg('mb',0);
+console.log('read value from bank: 0', MM.getUint16(0));
+
+
+
+/**
 const IP = 0;
 const ACC = 1;
 const R1 = 2;
@@ -19,7 +79,6 @@ const R8 = 9;
 const SP = 10;
 const FP = 11;
 
-const MM = new MemoryMapper();
 const memory = createMemory(256 * 256);
 MM.map(memory, 0, 0xffff); //map memory just created to mapper, no difference for now
 
@@ -58,8 +117,7 @@ writableBytes[i++] = instructions.HLT;
 
 cpu.run();
 
-
-/** #: memory address
+ #: memory address
  * move #0x0100, r1
  * move 0x0001,  r2
  * add r1, r2
