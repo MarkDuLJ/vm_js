@@ -35,6 +35,14 @@ const validIdentifier = mapJoin(A.sequenceOf([
   A.possibly(A.regex(/^[a-zA-Z0-9_]+/)).map(x => x === null ? '' : x),
 ]));
 
+const label = A.sequenceOf([
+    validIdentifier,
+    A.char(':'),
+    A.optionalWhitespace,
+  ])
+  .map(([labelName]) => labelName)
+  .map(T.label);
+
 const variable = A.char('!')
   .chain(() => validIdentifier)
   .map(T.variable);
@@ -59,4 +67,5 @@ module.exports = {
     operator,
     upperOrLowerStr,
     address,
+    label,
 }

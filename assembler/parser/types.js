@@ -17,6 +17,8 @@ const squareBracketExpr = asType('SQ_BRACKET_EXPR');
 
 const instruction = asType('INSTRUCTION');
 
+const label = asType('LABEL');
+
 module.exports = {
     register,
     opPlus,
@@ -30,4 +32,5 @@ module.exports = {
     parentheseExpression,
     squareBracketExpr,
     instruction,
+    label,
 }

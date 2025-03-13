@@ -1,6 +1,7 @@
 const parser = require('./parser')
 const instructions = require('../instructions')
-const {instructionTypes: I} = require('../instructions/meta')
+const {instructionTypes: I} = require('../instructions/meta');
+const { instruction } = require('./parser/types');
 
 const registerMap = {
         ip:  0,
@@ -17,6 +18,7 @@ const registerMap = {
         fp:  11,
 }
 
+/*
 const exampleProgram = [
     'mov $4200, r1',
     'mov r1, &0060',
@@ -24,32 +26,83 @@ const exampleProgram = [
     'mov &0060, r2',
     'add r2, r1',
 ].join('\n');
+*/
 
-const parseOutput = parser.run(exampleProgram)
+const exampleProgram = [
+    'start:',
+    'mov $0A, &0050',
+    'loop:',
+    'mov &0050, acc',
+    'dec acc',
+    'mov acc, &0050',
+    'inc r2',
+    'inc r2',
+    'inc r2',
+    'jne $00, &[!loop]',
+    'end:',
+    'hlt',
+].join('\n');
+
+const parseOutput = parser.run(exampleProgram);
+console.log(parseOutput.result);
+
 
 const machineCode = []
+const labels = {}
+let currentAddr = 0
+
+parseOutput.result.forEach(instructionOrLabel => {
+    if(instructionOrLabel.type === 'LABEL'){
+        labels[instructionOrLabel.value] = currentAddr;
+    }else{
+        const metadata = instructions[instructionOrLabel.value.instruction];
+        currentAddr += metadata.size;
+    }
+});
 
 const encodeLit16 = lit => {
-    const hexVal = parseInt(lit.value, 16);
+    let hexVal;
+    if(lit.type === 'VARIABLE'){
+        if(!(lit.value in labels)){
+            throw new Error(`lable "${lit.value}" not resovled.`)
+        }
+        hexVal = labels[lit.value];
+    }else{
+        hexVal = parseInt(lit.value, 16);
+    }
     const highByte = (hexVal & 0xff00) >> 8;
     const lowByte = hexVal & 0x00ff;
     machineCode.push(highByte, lowByte);
-}
+};
 
 const encodeLit8 = lit => {
-    const hexVal = parseInt(lit.value, 16);
+    let hexVal;
+    if(lit.type === 'VARIABLE'){
+        if(!(lit.value in labels)){
+            throw new Error(`lable "${lit.value}" not resovled.`)
+        }
+        hexVal = labels[lit.value];
+    }else{
+        parseInt(lit.value, 16);
+    }
     const lowByte = hexVal & 0x00ff;
     machineCode.push(lowByte);
-}
+};
 
 const encodeReg = reg => {
     const mappedReg = registerMap[reg.value];
     machineCode.push(mappedReg)
-}
+};
 
 parseOutput.result.forEach(instruction => {
+    // check instruction type is label or real instruction
+    if(instruction.type !== 'INSTRUCTION'){
+        return;
+    }
+
     //match right instruction object
     const metadata = instructions[instruction.value.instruction];
+    
     //push operation code to machine code array
     machineCode.push(metadata.opcode);
 
