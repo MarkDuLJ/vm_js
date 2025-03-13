@@ -1,4 +1,4 @@
-const {} = require('./meta');
+const {meta} = require('./meta');
 
 const indexBy = (array, prop) => array.reduce((output,item) => {
     output[item[prop]] = item;

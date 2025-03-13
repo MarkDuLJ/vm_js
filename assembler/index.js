@@ -1,0 +1,96 @@
+const parser = require('./parser')
+const instructions = require('../instructions')
+const {instructionTypes: I} = require('../instructions/meta')
+
+const registerMap = {
+        ip:  0,
+        acc: 1,
+        r1:  2,
+        r2:  3,
+        r3:  4,
+        r4:  5,
+        r5:  6,
+        r6:  7,
+        r7:  8,
+        r8:  9,
+        sp:  10,
+        fp:  11,
+}
+
+const exampleProgram = [
+    'mov $4200, r1',
+    'mov r1, &0060',
+    'mov $1300, r1',
+    'mov &0060, r2',
+    'add r2, r1',
+].join('\n');
+
+const parseOutput = parser.run(exampleProgram)
+
+const machineCode = []
+
+const encodeLit16 = lit => {
+    const hexVal = parseInt(lit.value, 16);
+    const highByte = (hexVal & 0xff00) >> 8;
+    const lowByte = hexVal & 0x00ff;
+    machineCode.push(highByte, lowByte);
+}
+
+const encodeLit8 = lit => {
+    const hexVal = parseInt(lit.value, 16);
+    const lowByte = hexVal & 0x00ff;
+    machineCode.push(lowByte);
+}
+
+const encodeReg = reg => {
+    const mappedReg = registerMap[reg.value];
+    machineCode.push(mappedReg)
+}
+
+parseOutput.result.forEach(instruction => {
+    //match right instruction object
+    const metadata = instructions[instruction.value.instruction];
+    //push operation code to machine code array
+    machineCode.push(metadata.opcode);
+
+    if([I.litReg, I.memReg].includes(metadata.type)){
+        encodeLit16(instruction.value.args[0]);
+        encodeReg(instruction.value.args[1]);
+    }
+
+    if([I.regLit, I.regMem].includes(metadata.type)){
+        encodeReg(instruction.value.args[0]);
+        encodeLit16(instruction.value.args[1]);
+    }
+
+    if(I.regLit8 === metadata.type){
+        encodeReg(instruction.value.args[0]);
+        encodeLit8(instruction.value.args[1]);
+    }
+
+    if([I.regReg, I.regPtrReg].includes(metadata.type)){
+        encodeReg(instruction.value.args[0]);
+        encodeReg(instruction.value.args[1]);
+    }
+
+    if(I.litMem === metadata.type){
+        encodeLit16(instruction.value.args[0]);
+        encodeLit16(instruction.value.args[1]);
+    }
+
+    if(I.litOffReg === metadata.type){
+        encodeLit16(instruction.value.args[0]);
+        encodeReg(instruction.value.args[1]);
+        encodeReg(instruction.value.args[2]);
+    }
+
+    if(I.singleReg === metadata.type) {
+        encodeReg(instruction.value.args[0]);
+    }
+
+    if(I.singleLit === metadata.type) {
+        encodeLit16(instruction.value.args[0]);
+    }
+});
+
+console.log(machineCode.join(" "));
