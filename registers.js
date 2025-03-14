@@ -12,4 +12,5 @@ module.exports = [
             'sp',//stack pointer
             'fp',//frame pointer
             'mb', //new memory bank
+            'im', //interrupt mask
 ]

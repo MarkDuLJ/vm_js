@@ -4,7 +4,7 @@ const instructions = require('./instructions');
 const registers = require('./registers');
 
 class CPU {
-    constructor(memory) {
+    constructor(memory, interuptVectorAddress = 0x1000) {
         this.memory = memory;
 
         this.registers = createMemory(registers.length * 2);
@@ -21,6 +21,10 @@ class CPU {
         //set stack pointer & fp to a fix address temporarily
         this.setReg('sp', 0xffff - 1); // for 16bit vm, move 1 to end of memory,move another one byte to get the right position
         this.setReg('fp', 0xffff - 1);
+
+        this.interuptVectorAddress = interuptVectorAddress;
+        this.isInInteruptHandler = false;
+        this.setReg('im', 0xffff);
 
         this.stackFrameSize = 0; //to track stack frame size, required by stack frame
     }
@@ -157,8 +161,41 @@ class CPU {
         return (this.fetch8() % this.registerNames.length) * 2;
     }
 
+    handleInterupt(value){
+        const interuptVectorIndex = value % 0xf;
+        const isUnmasked = Boolean((1 << interuptVectorIndex) & this.getReg('im'));
+
+        if(!isUnmasked) return;
+
+        const addressPointer = this.interuptVectorAddress + (interuptVectorIndex * 2);
+        const address = this.memory.getUint16(addressPointer);
+
+        if(!this.isInInteruptHandler){
+            //push 0 for the number of args
+            this.push(0);
+            this.pushState();
+        }
+
+        this.isInInteruptHandler = true;
+        this.setReg('ip', address);
+    }
+
     excute(instruction){
         switch (instruction) {
+            // return from the interupt
+            case instruction.RET_INT.opcode: {
+                this.isInInteruptHandler = false;
+                this.popState();
+                return;
+            }
+
+            // Software Triggered Interupt
+            case instructions.INT.opcode: {
+                const interuptValue = this.fetch16();
+                this.handleInterupt(interuptValue);
+                return;
+            }
+
             //move value from memory ito register, like memory to r1
             case instructions.MOVE_LIT_REG.opcode:{
                 const literal = this.fetch16();
