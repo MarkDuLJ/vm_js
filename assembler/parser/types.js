@@ -19,6 +19,9 @@ const instruction = asType('INSTRUCTION');
 
 const label = asType('LABEL');
 
+const data = asType('DATA');
+const constant = asType('CONSTANT');
+
 module.exports = {
     register,
     opPlus,
@@ -33,4 +36,6 @@ module.exports = {
     squareBracketExpr,
     instruction,
     label,
+    data,
+    constant,
 }

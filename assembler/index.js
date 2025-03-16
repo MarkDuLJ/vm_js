@@ -15,7 +15,6 @@ const exampleProgram = [
     'mov &0060, r2',
     'add r2, r1',
 ].join('\n');
-*/
 
 const exampleProgram = [
     'start:',
@@ -31,21 +30,56 @@ const exampleProgram = [
     'end:',
     'hlt',
 ].join('\n');
+*/
+
+const exampleProgram = `
+
+constant code_constant = $C0DE
+
++data8 bytes = { $01,   $02,   $03,   $04   }
+data16 words = { $0506, $0708, $090A, $0B0C }
+
+code:
+  mov [!code_constant], &1234
+
+`.trim();
 
 const parseOutput = parser.run(exampleProgram);
-console.log(parseOutput.result);
+
+if(parseOutput.isError){
+    throw new Error(parseOutput.error);
+}
 
 
 const machineCode = []
 const labels = {}
 let currentAddr = 0
 
-parseOutput.result.forEach(instructionOrLabel => {
-    if(instructionOrLabel.type === 'LABEL'){
-        labels[instructionOrLabel.value] = currentAddr;
-    }else{
-        const metadata = instructions[instructionOrLabel.value.instruction];
-        currentAddr += metadata.size;
+parseOutput.result.forEach(node => {
+    switch (node.type) {
+        case 'LABEL':{
+            labels[node.value] = currentAddr;           
+            break;
+        }
+
+        case 'CONSTANT':{
+            labels[node.value.name] = parseInt(node.value.value.value, 16) & 0xffff;
+            break;
+        }
+
+        case 'DATA':{
+            labels[node.value.name] = currentAddr;
+            const sizeOfEachValue = node.value.size === 16 ? 2 : 1;
+            const totalSize = node.value.values.length * sizeOfEachValue;
+            currentAddr += totalSize;
+            break;
+        }
+
+        default:{
+            const metadata = instructions[node.value.instruction];
+            currentAddr += metadata.size;
+            break;
+        }
     }
 });
 
@@ -83,56 +117,80 @@ const encodeReg = reg => {
     machineCode.push(mappedReg)
 };
 
-parseOutput.result.forEach(instruction => {
-    // check instruction type is label or real instruction
-    if(instruction.type !== 'INSTRUCTION'){
+const encodeData8 = node => {
+    for (let byte of node.value.values) {
+        const parsed = parseInt(byte.value, 16);
+        machineCode.push(parsed & 0xff);
+    }
+}
+
+const encodeData16 = node => {
+    for (let byte of node.value.values) {
+        const parsed = parseInt(byte.value, 16);
+        machineCode.push((parsed & 0xff00) >> 8);
+        machineCode.push(parsed & 0xff);
+    }
+}
+
+parseOutput.result.forEach(node => {
+    // ignore non instruction type 
+    if(node.type === 'LABEL' || node.type === 'CONSTANT'){
+        return;
+    }
+
+    if(node.type === 'DATA') {
+        if(node.value.size === 8){
+            encodeData8(node);
+        }else {
+            encodeData16(node);
+        }
         return;
     }
 
     //match right instruction object
-    const metadata = instructions[instruction.value.instruction];
-    
+    console.log("OUTPUT: ",node.value.args);
+    const metadata = instructions[node.value.instruction];
     //push operation code to machine code array
     machineCode.push(metadata.opcode);
 
     if([I.litReg, I.memReg].includes(metadata.type)){
-        encodeLit16(instruction.value.args[0]);
-        encodeReg(instruction.value.args[1]);
+        encodeLit16(node.value.args[0]);
+        encodeReg(node.value.args[1]);
     }
 
     if([I.regLit, I.regMem].includes(metadata.type)){
-        encodeReg(instruction.value.args[0]);
-        encodeLit16(instruction.value.args[1]);
+        encodeReg(node.value.args[0]);
+        encodeLit16(node.value.args[1]);
     }
 
     if(I.regLit8 === metadata.type){
-        encodeReg(instruction.value.args[0]);
-        encodeLit8(instruction.value.args[1]);
+        encodeReg(node.value.args[0]);
+        encodeLit8(node.value.args[1]);
     }
 
     if([I.regReg, I.regPtrReg].includes(metadata.type)){
-        encodeReg(instruction.value.args[0]);
-        encodeReg(instruction.value.args[1]);
+        encodeReg(node.value.args[0]);
+        encodeReg(node.value.args[1]);
     }
 
     if(I.litMem === metadata.type){
-        encodeLit16(instruction.value.args[0]);
-        encodeLit16(instruction.value.args[1]);
+        encodeLit16(node.value.args[0]);
+        encodeLit16(node.value.args[1]);
     }
 
     if(I.litOffReg === metadata.type){
-        encodeLit16(instruction.value.args[0]);
-        encodeReg(instruction.value.args[1]);
-        encodeReg(instruction.value.args[2]);
+        encodeLit16(node.value.args[0]);
+        encodeReg(node.value.args[1]);
+        encodeReg(node.value.args[2]);
     }
 
     if(I.singleReg === metadata.type) {
-        encodeReg(instruction.value.args[0]);
+        encodeReg(node.value.args[0]);
     }
 
     if(I.singleLit === metadata.type) {
-        encodeLit16(instruction.value.args[0]);
+        encodeLit16(node.value.args[0]);
     }
 });
 
-console.log(machineCode.join(" "));
+console.log(machineCode.map(x => '0x' + x.toString(16).padStart(2, '0')).join(" "));
